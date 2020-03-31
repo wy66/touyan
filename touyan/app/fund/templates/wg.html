@@ -1,0 +1,32 @@
+{% extends 'header.html' %}
+{% block content %}
+    <script src="/static/js/fund/out_wg.js"></script>
+
+
+
+    <div class="row">
+        <div class="col-xs-12">
+            <label>添加标的:</label>
+            <input type="text" class="form-control" style="display: inline-block;width: 150px" id="code">
+
+            <label>基准日期:</label>
+
+            <div class="form-inline" style="display: inline-block">
+                <div class="input-group input-append date form_tradingday" style="width: 150px">
+                    <input class="form-control" id="sdate" name="tradingday"
+                           size="10" type="text"
+                           value=""/>
+                    <span class="input-group-addon"><i class="glyphicon glyphicon-th"></i></span>
+                </div>
+            </div>
+            <button class="btn btn-primary btn-md" id="add">添加</button>
+            <button class="btn btn-primary btn-md" id="search">查询</button>
+
+        </div>
+    </div>
+
+<script>
+
+</script>
+
+{% endblock %}
