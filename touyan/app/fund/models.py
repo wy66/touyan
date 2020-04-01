@@ -12,6 +12,7 @@ class OuterFundWgConf(models.Model):
 #巨款基金代码及信息
 class JqCodeInfo(models.Model):
     code = models.CharField(max_length=30,null=False,primary_key=True)
+    jqcode = models.CharField(max_length=30, null=True)
     name = models.CharField(max_length=250,null=False)
     short_name = models.CharField(max_length=150)
     sdate = models.DateField()
