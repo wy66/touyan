@@ -14,5 +14,6 @@ urlpatterns = [
     url(r'^wg$', TemplateView.as_view(template_name='wg.html')),
     url(r'^wg_add$', wg_add),
     url(r'^wg_query$', wg_query),
+    url(r'^wg_query_table$', wg_query_table),
 ]
 

@@ -19,3 +19,11 @@ class JqCodeInfo(models.Model):
     edate = models.DateField()
     type = models.CharField(max_length=30)
 
+class FundClose(models.Model):
+    code = models.CharField(max_length=30)
+    sdate = models.DateField()
+    net_value = models.FloatField()
+    sum_value = models.FloatField()
+
+    class Meta:
+        unique_together = (("code", "sdate"),)
