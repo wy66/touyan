@@ -7,6 +7,9 @@ import pandas as pd
 from .datas.fund import *
 # Create your views here.
 
+#网格策略步长
+GLOBAL_BC = 0.04
+
 class JsonCustomEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, decimal.Decimal):
@@ -72,18 +75,14 @@ def wg_macd(df):
 
     return macd
 
-#根据第一次买入日期计算后面网格操作
-def wg_act(df,code,sdate):
-    act = {}
-
 
 
 def wg_query(request):
+    global GLOBAL_BC
     code = request.POST.get('code')
     sdate = request.POST.get('sdate')
     name = request.POST.get('name')
     data = {}
-
     obj = GetFundCloseJq(code,sdate='2018-01-01')
 
     #获取基金单位净值，累计净值，变化
@@ -93,21 +92,22 @@ def wg_query(request):
 
     macd = wg_macd(df)
     #计算macd
-    data[code]['macd'] = macd
+    data['macd'] = macd
 
     #获取天天基金最新数据
-    data[code]['nowtime'] = nowtime
+    data['nowtime'] = nowtime
 
     #基准日
     base_day = sdate
-    data[code]['base_day'] = base_day
+    base_day = datetime.date(int(base_day[:4]),int(base_day[5:7]),int(base_day[8:]))
+    data['base_day'] = base_day
     #基础净值
     base_data= df.loc[df.index==base_day]
     base_value = base_data['sum_value'].values[0]
-    data[c.code]['base_value'] = base_value
+    data['base_value'] = base_value
 
     #每次涨跌步长 取5%
-    rank_down = round(base_data['net_value'].values[0] * 0.04,2)
+    rank_down = round(base_data['net_value'].values[0] * GLOBAL_BC,2)
 
     max = df['sum_value'].max()
     min = df['sum_value'].min()
@@ -120,9 +120,9 @@ def wg_query(request):
     while temp < max+rank_down:
         markline.append(temp + rank_down)
         temp = temp + rank_down
-    data[c.code]['markline'] = markline
-    data[c.code]['name'] = JqCodeInfo.objects.filter(code=c.code)[0].short_name
-    data[c.code]['data'] = df.reset_index().fillna('').to_dict(orient='list')
+    data['markline'] = markline
+    data['name'] = name
+    data['data'] = df.reset_index().fillna('').to_dict(orient='list')
 
     #捕捉买点卖点，从基准点开始
     points_list = []
@@ -164,12 +164,12 @@ def wg_query(request):
                     points['base'] = points['base'] +  n_bc * rank_down
                     points_list.append(points.copy())
         #跟踪最近买卖机会
-        table_row['chg'] = (df1.loc[df1.index == df1.index.max()]['sum_value'][0] - points['base']) / rank_down*100
-        table_row['chg'] = round(table_row['chg'],2)
-        table.append(table_row)
-        data[c.code]['bs'] = points_list
+        # table_row['chg'] = (df1.loc[df1.index == df1.index.max()]['sum_value'][0] - points['base']) / rank_down*100
+        # table_row['chg'] = round(table_row['chg'],2)
+        # table.append(table_row)
+        data['bs'] = points_list
     #print(json.dumps(points_list, cls=JsonCustomEncoder))
-    return HttpResponse(json.dumps({'errCode':200,'errMsg':'success','data':data,'table':table}, cls=JsonCustomEncoder), 'content_type="application/json"')
+    return HttpResponse(json.dumps({'errCode':200,'errMsg':'success','data':data}, cls=JsonCustomEncoder), 'content_type="application/json"')
 
 def wg_query_table(request):
     table = []
@@ -181,6 +181,56 @@ def wg_query_table(request):
         temp['sdate'] = c.sdate
         temp['name'] = info.name
         temp['short_name'] = info.short_name
+
+        obj = GetFundCloseJq(c.code, sdate='2018-01-01')
+
+        # 获取基金单位净值，累计净值，变化
+        df, nowtime = obj.get_close()
+        if df.empty:
+            continue
+        temp['nowtime'] = nowtime
+        base_day = c.sdate
+        df1 = df.loc[df.index >= base_day]
+        # 每次涨跌步长 取5%
+        # 基础净值
+        base_data = df1.loc[df1.index == base_day]
+        rank_down = round(base_data['net_value'].values[0] * GLOBAL_BC, 2)
+        points = {}
+        for d, row in df1.iterrows():
+            # 初始，第一天买入
+            if not points:
+                points['sdate'] = d
+                points['sum_value'] = row['sum_value']
+                points['act'] = 'buy'
+                points['base'] = row['sum_value']
+
+            else:
+                # 不是第一次买入，就开始比较每天的涨跌幅
+                chg = row['sum_value'] - points['base']
+                # 跌
+                if chg < 0:
+                    # 跌的多于步长
+                    if abs(chg) > rank_down:
+                        points['sdate'] = d
+                        points['sum_value'] = row['sum_value']
+                        points['act'] = 'buy'
+                        # n个步长
+                        n_bc = (points['base'] - row['sum_value']) // rank_down
+                        points['base'] = points['base'] - n_bc * rank_down
+                    # 跌，但是跌的少
+                    else:
+                        pass
+                else:
+                    if chg > rank_down:
+                        points['sdate'] = d
+                        points['sum_value'] = row['sum_value']
+                        points['act'] = 'sale'
+                        n_bc = (row['sum_value'] - points['base']) // rank_down
+                        points['base'] = points['base'] + n_bc * rank_down
+        chg = (df1.loc[df1.index == df1.index.max()]['sum_value'][0] - points['base']) / rank_down * 100.0
+        chg = round(chg,2)
+        temp['chg'] = chg
         table.append(temp)
+
     return HttpResponse(json.dumps({'errCode':200,'errMsg':'success','table':table}, cls=JsonCustomEncoder), 'content_type="application/json"')
 

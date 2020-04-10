@@ -8,6 +8,7 @@
 ######加载django环境
 import os
 import django
+from django.db.models import Max,Min
 # 添加环境变量
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "touyan.settings")
 if django.VERSION >= (1, 7):#自动判断版本
@@ -50,7 +51,53 @@ class GetFundCloseJq(GetFundClose):
         self.sdate = sdate
 
     def get_close(self):
-        df = pd.DataFrame(list(FundClose.objects.filter(code=self.code).all()[:1000].values()))
+
+        #获取当前数据最新日期
+        q = query(finance.FUND_NET_VALUE).filter(finance.FUND_NET_VALUE.code == self.code).order_by(
+            finance.FUND_NET_VALUE.day.desc()).limit(1)
+        df = finance.run_query(q)
+        #最新日期
+        newday = df['day'][0]
+
+        #数据库已存的最新日期
+        db_newday = FundClose.objects.filter(code=self.code).aggregate(Max('sdate')).get('sdate__max',None)
+        #空的，一条数据都没有,插入1000条
+        if db_newday is None:
+            q = query(finance.FUND_NET_VALUE).filter(finance.FUND_NET_VALUE.code == self.code).order_by(
+                finance.FUND_NET_VALUE.day.desc()).limit(1000)
+            df = finance.run_query(q)
+            df = df[['day', 'net_value', 'sum_value']]
+            for i, row in df.iterrows():
+                print(row['day'])
+                # 存在或者替换
+                FundClose.objects.update_or_create(
+                    code=self.code,
+                    sdate=row['day'],
+                    net_value=row['net_value'],
+                    sum_value=row['sum_value'],
+                    defaults={'code': self.code, 'sdate': row['day']}
+                )
+        else:
+            #部分数据没更新
+            if newday > db_newday:
+                num = (newday - db_newday).days+7
+                q = query(finance.FUND_NET_VALUE).filter(finance.FUND_NET_VALUE.code == self.code).order_by(
+                    finance.FUND_NET_VALUE.day.desc()).limit(num)
+                df = finance.run_query(q)
+                df = df[['day', 'net_value', 'sum_value']]
+                for i, row in df.iterrows():
+                    print(row['day'])
+                    # 存在或者替换
+                    FundClose.objects.update_or_create(
+                        code=self.code,
+                        sdate=row['day'],
+                        net_value=row['net_value'],
+                        sum_value=row['sum_value'],
+                        defaults={'code': self.code, 'sdate': row['day']}
+                    )
+
+
+        df = pd.DataFrame(list(FundClose.objects.filter(code=self.code).all().order_by('-sdate')[:1000].values()))
         if df.empty:
             return df,None
         #已有的最新日期
@@ -73,7 +120,6 @@ class GetFundCloseJq(GetFundClose):
 
 #获取聚宽所以代码
 def get_jq_code():
-    auth('14613350695', '350695')
     df = get_all_securities(types=['fund', 'index', 'etf', 'lof', 'QDII_fund', 'stock_fund', 'mixture_fund', 'open_fund'],
         date='2020-03-26')
 
