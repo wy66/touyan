@@ -16,6 +16,8 @@ $(function () {
     })
     init();
 
+    setInterval('queryTable()',1000*60*5)
+
 })
 
 function queryTable() {
@@ -27,6 +29,8 @@ function queryTable() {
         fillTable(data['table'])
     })
 }
+
+
 
 function query() {
      getJson('/fund/wg_query',{},function (data) {
@@ -44,17 +48,17 @@ function init() {
 }
 
 function fillTable(data) {
- var columnsInit = [
-    [
-        {field: 'code', title: '代码', align: 'center',valign: 'middle',},
-        {field: 'sdate', title: '基准开始日期', align: 'center',valign: 'middle'},
-        {field: 'name', title: '全称', align: 'center',valign: 'middle',},
-        {field: 'short_name', title: '简称', align: 'center',valign: 'middle'},
-        {field: 'nowtime', title: '最新时间', align: 'center',valign: 'middle'},
-        {field: 'chg', title: '买卖点位分位数', align: 'center',valign: 'middle'},
+    var columnsInit = [
+        [
+            {field: 'code', title: '代码', align: 'center',valign: 'middle',},
+            {field: 'sdate', title: '基准开始日期', align: 'center',valign: 'middle'},
+            {field: 'name', title: '全称', align: 'center',valign: 'middle',},
+            {field: 'short_name', title: '简称', align: 'center',valign: 'middle'},
+            {field: 'nowtime', title: '最新时间', align: 'center',valign: 'middle'},
+            {field: 'chg', title: '买卖点位分位数', align: 'center',valign: 'middle',cellStyle:bsColor},
 
-    ]
- ];
+        ]
+    ];
     $('#table1').bootstrapTable('destroy').bootstrapTable({
         striped: true,
         columns: columnsInit,
@@ -66,6 +70,8 @@ function fillTable(data) {
         }
 
     })
+
+
 }
 
 function fillCharts(data) {
@@ -73,10 +79,19 @@ function fillCharts(data) {
     //y轴平行x轴格子线
     var markdata = []
     for(var i = 0;i<data['markline'].length;i++){
+        var mkcolor = '';
+        if(data['markline'][i] > data['base_value']){
+            mkcolor = '#1c77d2'
+        }else if(data['markline'][i] < data['base_value']){
+            mkcolor = '#548B54'
+        }
         markdata.push(
             {
                 'name':data['markline'][i],
                 'yAxis':data['markline'][i],
+                'lineStyle': {
+                    'color': mkcolor
+                }
             }
         )
     }
@@ -137,7 +152,7 @@ function fillCharts(data) {
         legend: {
             left: 'center',
             top:'8%',
-            data: ['单位净值','累计净值',]
+            data: ['累计净值','N日涨跌幅变化']
         },
     grid:  [{
         left: '10%',
@@ -181,6 +196,7 @@ function fillCharts(data) {
                 gridIndex:0,
 
             },
+
                             {
                 type: 'value',
                 name: '',
@@ -190,6 +206,7 @@ function fillCharts(data) {
                 scale:true,
                 gridIndex:1,
             },
+
         ],
         dataZoom: [
             {
@@ -200,17 +217,6 @@ function fillCharts(data) {
             },
         ],
         series:[
-            {
-                name: '单位净值',
-                type: 'line',
-                data:data['data']['net_value'],
-                symbol:"none",
-                itemStyle: {
-                    normal: {
-
-                    }
-                },
-            },
             {
                 name: '累计净值',
                 type: 'line',
@@ -234,6 +240,7 @@ function fillCharts(data) {
                 }
 
             },
+
             {
                 name: 'DIF',
                 type: 'line',
@@ -281,4 +288,17 @@ function fillCharts(data) {
     var seasonCharts = echarts.init(document.getElementById('chart_1'));
     seasonCharts.setOption(option, true);
     seasonCharts.resize();
+}
+
+function bsColor(value, row, index) {
+    if (value > 101) {
+        return {
+            classes: 'salecolor'
+        }
+    }else if(value < -101){
+        return {
+            classes: 'buycolor'
+        }
+    }
+    return {};
 }

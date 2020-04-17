@@ -4,8 +4,12 @@ from .models import *
 import json
 import decimal
 import pandas as pd
+import numpy as np
 from .datas.fund import *
+from .call import  *
 # Create your views here.
+
+
 
 #网格策略步长
 GLOBAL_BC = 0.04
@@ -75,7 +79,13 @@ def wg_macd(df):
 
     return macd
 
-
+def aa(x):
+    if np.isnan(x):
+        return ''
+    elif x > 0:
+        return 1
+    else:
+        return -1
 
 def wg_query(request):
     global GLOBAL_BC
@@ -230,6 +240,10 @@ def wg_query_table(request):
         chg = (df1.loc[df1.index == df1.index.max()]['sum_value'][0] - points['base']) / rank_down * 100.0
         chg = round(chg,2)
         temp['chg'] = chg
+        if chg >99:
+            send_email(info.name+'卖点出现!','')
+        elif chg < -99:
+            send_email(info.name + '买点出现!', '')
         table.append(temp)
 
     return HttpResponse(json.dumps({'errCode':200,'errMsg':'success','table':table}, cls=JsonCustomEncoder), 'content_type="application/json"')

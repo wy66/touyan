@@ -163,7 +163,6 @@ def fund_close_init():
 
 #初始化每天数据
 def fund_init():
-    auth(JQUER, JQPWD)
     fund_close_init()
 
 if __name__ == '__main__':

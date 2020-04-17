@@ -17,7 +17,7 @@ from django.urls import path
 from django.conf.urls import url, include
 from django.views.generic import TemplateView
 from jqdatasdk import *
-auth('14613350695', '350695')
+# auth('14613350695', '350695')
 
 urlpatterns = [
     url(r'^$',TemplateView.as_view(template_name='index.html')),
