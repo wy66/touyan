@@ -16,8 +16,6 @@ if django.VERSION >= (1, 7):#自动判断版本
 
 from app.fund.models import *
 from abc import ABCMeta, abstractmethod
-from jqdatasdk import *
-from jqdatasdk import finance
 import datetime
 import requests
 import json, re

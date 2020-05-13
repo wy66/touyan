@@ -248,3 +248,45 @@ def wg_query_table(request):
 
     return HttpResponse(json.dumps({'errCode':200,'errMsg':'success','table':table}, cls=JsonCustomEncoder), 'content_type="application/json"')
 
+def dl_query(request):
+    codes = {
+        '481012':'深红利联接A',
+        '005064':'广发中证全指家用电器指数C',
+        '000248':'汇添富消费联接',
+        '161725':'白酒分级'
+    }
+    df_all = None
+    #N日涨跌幅
+    N = 13
+    #M日均线
+    M = 13
+    for c in codes:
+        obj = GetFundCloseJq(c, sdate='2018-01-01')
+
+        # 获取基金单位净值，累计净值，变化
+        df, nowtime = obj.get_close()
+        df['N'] = df['sum_value'].shift(N)
+        df['M'] = df['sum_value'].rolling(M).mean()
+        df['last'] = df['sum_value'].shift(1)
+        df['chg'] = (df['sum_value'] - df['last']) / df['last']
+        df = df.dropna(subset=['N','M'])
+        df = df.rename(columns={'net_value':c+'_net','sum_value':c+'_sum','N':c+'_N','M':c+'_M','chg':c+'_chg'})
+        if df_all is None:
+            df_all = df
+        else:
+            df_all = df_all.join(df)
+    df_all = df_all.sort_index()
+
+
+    for d,row in df_all.iterrows():
+        zdf = {}
+        for c in codes:
+            zdf[c] = (row[c+'_sum'] - row[c+'_N']) /  row[c+'_N']
+        max_code = [x for x in zdf if zdf[x] == max(zdf.values())][0]
+        if row[max_code] > row[max_code+'_M']:
+            print(d,max_code)
+
+
+
+    return HttpResponse(json.dumps({'errCode':200,'errMsg':'success','table':{}}, cls=JsonCustomEncoder), 'content_type="application/json"')
+
