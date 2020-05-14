@@ -2,6 +2,10 @@ $(function () {
     $('#add').click(function () {
         var code = $('#code').val();
         var sdate = $('#sdate').val();
+        if(sdate == ''){
+            alert('日期不能为空');
+            return
+        }
         getJson('/fund/wg_add',{'code':code,'sdate':sdate},function (data) {
             if(data['errCode'] != '200'){
                 alert(data['errMsg']);
@@ -44,6 +48,17 @@ function query() {
 }
 
 function init() {
+    getJsonSyn('/fund/jj_codes',{},function (data) {
+        if(data['errCode'] != '200'){
+            alert(data['errMsg']);
+            return
+        }
+        for(var i = 0;i<data['data'].length;i++){
+            $('#code').append('<option value="'+ data['data'][i]['jjcode'] +'">'+ data['data'][i]['sname']+ '(' + data['data'][i]['jjcode'] +')' +'</option>')
+        }
+        $('#code').selectpicker('refresh')
+    })
+
     queryTable();
 }
 
@@ -68,7 +83,6 @@ function fillTable(data) {
                 fillCharts(data['data']);
             })
         }
-
     })
 
 
@@ -168,7 +182,7 @@ function fillCharts(data) {
         xAxis: [
             {
                 type: 'category',
-                data: data['data']['sdate'],
+                data: data['data']['datadate'],
                 axisPointer: {
                     type: 'shadow'
                 },

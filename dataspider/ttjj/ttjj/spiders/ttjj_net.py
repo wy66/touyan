@@ -8,9 +8,9 @@ from ttjj.items import *
 from ttjj.util import table_to_list
 
 #获取净值的开始时间
-NET_SDAY = '2017-01-01'
+NET_SDAY = ''
 #净值每次取得条数
-NET_NUM = 300
+NET_NUM = 60
 
 
 class TtjjNetSpider(scrapy.Spider):
@@ -21,6 +21,8 @@ class TtjjNetSpider(scrapy.Spider):
     #获取基金列表
     def parse(self, response):
         for row in eval(response.text[8:-1]):
+            if row[0] >= '163804':
+                continue
             yield scrapy.Request(url='http://fundf10.eastmoney.com/{code}.html'.format(code=row[0]), callback=self.parse1, meta={'code':row[0]})
 
     #获取每个基金对应信息
@@ -34,6 +36,8 @@ class TtjjNetSpider(scrapy.Spider):
             sname = table[0][3]
             stype = table[1][3]
             tmp = re.findall(r'\d+',table[2][3])
+            if len(tmp) <3:
+                return
             sday = datetime.datetime.strptime(str(tmp[0])+'-'+ str(tmp[1]) + '-' + str(tmp[2]) ,'%Y-%m-%d')
             gm = table[3][1]
             if '亿' not in gm:

@@ -1,5 +1,7 @@
 from django.shortcuts import render,HttpResponse
 from django.db import connections
+from django.forms.models import model_to_dict
+from django.db import connections
 from .models import *
 import json
 import decimal
@@ -23,6 +25,12 @@ class JsonCustomEncoder(json.JSONEncoder):
         if isinstance(obj, datetime.date):
             return obj.strftime('%Y-%m-%d')
         return super(JsonCustomEncoder, self).default(obj)
+
+def jj_codes(request):
+    objs = jjCode.objects.all().order_by('jjcode')
+    data = [model_to_dict(x) for x in objs]
+    return HttpResponse(json.dumps({'errCode':200,'errMsg':'success','data':data}, cls=JsonCustomEncoder), 'content_type="application/json"')
+
 
 def wg_add(request):
     code = request.POST.get('code')
@@ -93,7 +101,7 @@ def wg_query(request):
     sdate = request.POST.get('sdate')
     name = request.POST.get('name')
     data = {}
-    obj = GetFundCloseJq(code,sdate='2018-01-01')
+    obj = GetFundClose(code,sdate='2018-01-01')
 
     #获取基金单位净值，累计净值，变化
     df,nowtime = obj.get_close()
@@ -112,6 +120,8 @@ def wg_query(request):
     base_day = datetime.date(int(base_day[:4]),int(base_day[5:7]),int(base_day[8:]))
     data['base_day'] = base_day
     #基础净值
+    if df.index.min() > base_day:
+        base_day = df.index.min()
     base_data= df.loc[df.index==base_day]
     base_value = base_data['sum_value'].values[0]
     data['base_value'] = base_value
@@ -185,14 +195,14 @@ def wg_query_table(request):
     table = []
     codes = OuterFundWgConf.objects.all()
     for c in codes:
-        info = JqCodeInfo.objects.filter(code=c.code).first()
+        info = jjCode.objects.filter(jjcode=c.code).first()
         temp = {}
         temp['code'] = c.code
         temp['sdate'] = c.sdate
-        temp['name'] = info.name
-        temp['short_name'] = info.short_name
+        temp['name'] = info.fname
+        temp['short_name'] = info.sname
 
-        obj = GetFundCloseJq(c.code, sdate='2018-01-01')
+        obj = GetFundClose(c.code, sdate='2018-01-01')
 
         # 获取基金单位净值，累计净值，变化
         df, nowtime = obj.get_close()
@@ -203,7 +213,10 @@ def wg_query_table(request):
         df1 = df.loc[df.index >= base_day]
         # 每次涨跌步长 取5%
         # 基础净值
+        if df1.index.min() > base_day:
+            base_day = df1.index.min()
         base_data = df1.loc[df1.index == base_day]
+
         rank_down = round(base_data['net_value'].values[0] * GLOBAL_BC, 2)
         points = {}
         for d, row in df1.iterrows():
@@ -261,7 +274,7 @@ def dl_query(request):
     #M日均线
     M = 13
     for c in codes:
-        obj = GetFundCloseJq(c, sdate='2018-01-01')
+        obj = GetFundClose(c, sdate='2018-01-01')
 
         # 获取基金单位净值，累计净值，变化
         df, nowtime = obj.get_close()
@@ -286,7 +299,14 @@ def dl_query(request):
         if row[max_code] > row[max_code+'_M']:
             print(d,max_code)
 
-
-
     return HttpResponse(json.dumps({'errCode':200,'errMsg':'success','table':{}}, cls=JsonCustomEncoder), 'content_type="application/json"')
+
+def fund_general_query(request):
+    sql = '''
+        select datadate,jjcode,net_value from ttjjnet where DATE_SUB(CURDATE(), INTERVAL 30 DAY) <= date(datadate)  
+    '''
+    df = pd.read_sql(sql,connections['default'])
+    df.pivot(index='datadate', columns='jjcode',values='net_value')
+    return HttpResponse(json.dumps({'errCode':200,'errMsg':'success','table':{}}, cls=JsonCustomEncoder), 'content_type="application/json"')
+
 
