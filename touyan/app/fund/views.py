@@ -303,10 +303,17 @@ def dl_query(request):
 
 def fund_general_query(request):
     sql = '''
-        select datadate,jjcode,net_value from ttjjnet where DATE_SUB(CURDATE(), INTERVAL 30 DAY) <= date(datadate)  
+        select datadate,jjcode,net_value from ttjjnet where DATE_SUB(CURDATE(), INTERVAL 80 DAY) <= date(datadate)  
     '''
     df = pd.read_sql(sql,connections['default'])
-    df.pivot(index='datadate', columns='jjcode',values='net_value')
+    df = df.pivot(index='datadate', columns='jjcode',values='net_value')
+    df.sort_index(ascending=False,inplace=True)
+    data = {}
+    for d in [1,5,10,20,40]:
+        data[d] = {}
+        for c in df.columns:
+            data[d][c] = (df[c][0] - df[c][d])/df[c][d]*100
+
     return HttpResponse(json.dumps({'errCode':200,'errMsg':'success','table':{}}, cls=JsonCustomEncoder), 'content_type="application/json"')
 
 
