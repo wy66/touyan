@@ -80,7 +80,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'touyan_data',
-        'HOST':'127.0.0.1',
+        'HOST':'192.168.93.136',
         'PORT':3306,
         'USER':'root',
         'PASSWORD':'123456'

@@ -10,7 +10,7 @@ from ttjj.util import table_to_list
 #获取净值的开始时间
 NET_SDAY = ''
 #净值每次取得条数
-NET_NUM = 60
+NET_NUM = 300
 
 
 class TtjjNetSpider(scrapy.Spider):
@@ -21,8 +21,6 @@ class TtjjNetSpider(scrapy.Spider):
     #获取基金列表
     def parse(self, response):
         for row in eval(response.text[8:-1]):
-            if row[0] >= '163804':
-                continue
             yield scrapy.Request(url='http://fundf10.eastmoney.com/{code}.html'.format(code=row[0]), callback=self.parse1, meta={'code':row[0]})
 
     #获取每个基金对应信息
