@@ -10,7 +10,7 @@ from ttjj.util import table_to_list
 #获取净值的开始时间
 NET_SDAY = ''
 #净值每次取得条数
-NET_NUM = 300
+NET_NUM = 200
 
 
 class TtjjNetSpider(scrapy.Spider):
@@ -20,8 +20,13 @@ class TtjjNetSpider(scrapy.Spider):
 
     #获取基金列表
     def parse(self, response):
+        codes = []
         for row in eval(response.text[8:-1]):
             yield scrapy.Request(url='http://fundf10.eastmoney.com/{code}.html'.format(code=row[0]), callback=self.parse1, meta={'code':row[0]})
+            codes.append(row[0])
+        codes.sort()
+        for c in codes[:1001]:
+            yield scrapy.Request(url='http://fundf10.eastmoney.com/{code}.html'.format(code=c), callback=self.parse1, meta={'code':c})
 
     #获取每个基金对应信息
     def parse1(self,response):
@@ -42,13 +47,13 @@ class TtjjNetSpider(scrapy.Spider):
                 return
             gm = re.findall(r'\d+',gm)[0]
             #只取规模大于5亿元
-            if float(gm) < 2:
+            if float(gm) < 0.5:
                 return
             #持有一般都有封闭期
             if '持有' in fname or '封闭' in fname or '定期' in fname:
                 return
             #乱七八糟不要
-            if stype in ['货币型', '债券型', '定开债券', '固定收益', '理财型', '分级杠杆', '其他创新']:
+            if stype in ['货币型', '债券型', '定开债券', '固定收益', '理财型', '分级杠杆', '其他创新','QDII','QDII-指数','ETF-场内','QDII-ETF','债券指数']:
                 return
 
             item = TtjjCode()

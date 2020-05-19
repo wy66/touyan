@@ -302,18 +302,46 @@ def dl_query(request):
     return HttpResponse(json.dumps({'errCode':200,'errMsg':'success','table':{}}, cls=JsonCustomEncoder), 'content_type="application/json"')
 
 def fund_general_query(request):
+    day = request.POST.get('day')
     sql = '''
-        select datadate,jjcode,net_value from ttjjnet where DATE_SUB(CURDATE(), INTERVAL 80 DAY) <= date(datadate)  
-    '''
+        select t.datadate,t.jjcode,t1.sname,t.net_value from ttjjnet t left join ttjjcode t1 on t.jjcode=t1.jjcode where datadate in (
+            select datadate from (
+                SELECT @rownum := @rownum + 1 AS id,t.* from(
+                    SELECT DISTINCT datadate from ttjjnet order by datadate desc
+                ) t,(select @rownum:=0) t1
+            ) t where t.id in (1,{d})
+        )
+    '''.format(d=day)
     df = pd.read_sql(sql,connections['default'])
-    df = df.pivot(index='datadate', columns='jjcode',values='net_value')
-    df.sort_index(ascending=False,inplace=True)
-    data = {}
-    for d in [1,5,10,20,40]:
-        data[d] = {}
-        for c in df.columns:
-            data[d][c] = (df[c][0] - df[c][d])/df[c][d]*100
+    df = df.pivot(index='sname', columns='datadate',values='net_value')
+    clist = df.columns.tolist()
+    clist.sort()
+    df['chg'] = (df[clist[1]] - df[clist[0]]) / df[clist[0]] * 100
+    df = df.round(4)
+    df.sort_values('chg', ascending=False, inplace=True)
 
-    return HttpResponse(json.dumps({'errCode':200,'errMsg':'success','table':{}}, cls=JsonCustomEncoder), 'content_type="application/json"')
+    ret_data = {
+        'days':clist,
+        'table':df.reset_index()[['sname','chg']].fillna('').to_dict(orient='records')
+    }
+    return HttpResponse(json.dumps({'errCode':200,'errMsg':'success','data':ret_data}, cls=JsonCustomEncoder), 'content_type="application/json"')
+
+def fund_general_rank(request):
+    sname = request.POST.get('sname')
+    day = request.POST.get('day')
+
+    sql = '''
+        SELECT * from ttjjcode where sname = '{sname}'
+    '''.format(sname=sname)
+    df = pd.read_sql(sql,connections['default'])
+    code = df['JJCODE'][0]
+
+    sql = '''
+        select * from ttjjnet order by datadate desc
+    '''
+    ret_data = {
+
+    }
+    return HttpResponse(json.dumps({'errCode':200,'errMsg':'success','data':ret_data}, cls=JsonCustomEncoder), 'content_type="application/json"')
 
 

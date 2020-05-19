@@ -22,5 +22,6 @@ urlpatterns = [
     url(r'^dl$', TemplateView.as_view(template_name='dl.html')),
     url(r'^dl_query$', dl_query),
     url(r'^fund_general_query$', fund_general_query),
+    url(r'^fund_general_rank$', fund_general_rank),
 ]
 

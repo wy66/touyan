@@ -3,18 +3,25 @@
     <script src="/static/js/fund/fund_general.js"></script>
 
     <style>
-
+        .col-center-block {
+            float: none;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
     </style>
 
 
     <div class="row">
         <div class="col-xs-12">
+            <label>近N日排名：</label>
+            <input type="text" class="form-control" style="display: inline-block;width: 100px" id="dayrank" value="7">
             <button class="btn btn-primary btn-md" id="search">查询</button>
 
         </div>
     </div>
     <div class="row">
-        <div class="col-xs-8">
+        <div class="col-xs-4 col-center-block">
             <table id="table"></table>
         </div>
     </div>
