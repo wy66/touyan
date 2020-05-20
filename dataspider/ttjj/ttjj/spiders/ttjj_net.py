@@ -25,7 +25,7 @@ class TtjjNetSpider(scrapy.Spider):
             yield scrapy.Request(url='http://fundf10.eastmoney.com/{code}.html'.format(code=row[0]), callback=self.parse1, meta={'code':row[0]})
             codes.append(row[0])
         codes.sort()
-        for c in codes[:1001]:
+        for c in codes[2001:4001]:
             yield scrapy.Request(url='http://fundf10.eastmoney.com/{code}.html'.format(code=c), callback=self.parse1, meta={'code':c})
 
     #获取每个基金对应信息
@@ -47,7 +47,7 @@ class TtjjNetSpider(scrapy.Spider):
                 return
             gm = re.findall(r'\d+',gm)[0]
             #只取规模大于5亿元
-            if float(gm) < 0.5:
+            if float(gm) < 5:
                 return
             #持有一般都有封闭期
             if '持有' in fname or '封闭' in fname or '定期' in fname:
@@ -70,39 +70,23 @@ class TtjjNetSpider(scrapy.Spider):
             yield scrapy.Request(url=url, callback=self.parse3, meta={'code': code})
             #基金净值
             url = 'http://api.fund.eastmoney.com/f10/lsjz?fundCode={code}&pageIndex=1&pageSize={num}&startDate={sday}&endDate='.format(code=code,num=NET_NUM,sday=NET_SDAY)
-            yield scrapy.Request(url=url, callback=self.parse2, meta={'code':code,'flag':1})
+            yield scrapy.Request(url=url, callback=self.parse2, meta={'code':code})
 
     #获取基金净值
     def parse2(self,response):
         code = response.meta.get('code')
-        flag = response.meta.get('flag')
         #第一次，需要获取页数，方便对剩下的数据获取
         data = json.loads(response.text)
-        if flag == 1:
-            table = data['Data']['LSJZList']
-            for row in table:
-                item = TtjjNet()
-                item['datadate'] = datetime.datetime.strptime(row['FSRQ'] ,'%Y-%m-%d')
-                item['jjcode'] = code
-                item['net_value'] = row['DWJZ'] if row['DWJZ'] != '' else None
-                item['sum_value'] = row['LJJZ'] if row['LJJZ'] != '' else None
-                yield item
-
-            pages = math.ceil(data['TotalCount']/NET_NUM)
-            if pages > 1:
-                for p in range(2,pages+1):
-                    url = 'http://api.fund.eastmoney.com/f10/lsjz?fundCode={code}&pageIndex={page}&pageSize={num}&startDate={sday}&endDate='.format(code = code,page=p,num=NET_NUM,sday=NET_SDAY)
-                    yield scrapy.Request(url=url, callback=self.parse2, meta={'code': code, 'flag': 2})
-
-        elif flag == 2:
-            table = data['Data']['LSJZList']
-            for row in table:
-                item = TtjjNet()
-                item['datadate'] = datetime.datetime.strptime(row['FSRQ'], '%Y-%m-%d')
-                item['jjcode'] = code
-                item['net_value'] = row['DWJZ'] if row['DWJZ'] != '' else None
-                item['sum_value'] = row['LJJZ'] if row['LJJZ'] != '' else None
-                yield item
+        if data['Data'] is None:
+            return
+        table = data['Data']['LSJZList']
+        for row in table:
+            item = TtjjNet()
+            item['datadate'] = datetime.datetime.strptime(row['FSRQ'] ,'%Y-%m-%d')
+            item['jjcode'] = code
+            item['net_value'] = row['DWJZ'] if row['DWJZ'] != '' else None
+            item['sum_value'] = row['LJJZ'] if row['LJJZ'] != '' else None
+            yield item
 
     #获取基金十大股票持仓
     def parse3(self,response):

@@ -15,7 +15,15 @@
     <div class="row">
         <div class="col-xs-12">
             <label>近N日排名：</label>
-            <input type="text" class="form-control" style="display: inline-block;width: 100px" id="dayrank" value="7">
+            <input type="text" class="form-control" style="display: inline-block;width: 100px" id="daynum" value="13">
+            <div class="form-inline" style="display: inline-block">
+            <div class="input-group input-append date form_tradingday" style="width: 150px">
+                            <input class="form-control" id="sdate" name="tradingday"
+                                   size="10" type="text"
+                                   value=""/>
+                            <span class="input-group-addon"><i class="glyphicon glyphicon-th"></i></span>
+                        </div>
+            </div>
             <button class="btn btn-primary btn-md" id="search">查询</button>
 
         </div>
@@ -25,6 +33,28 @@
             <table id="table"></table>
         </div>
     </div>
+
+        <!-- 模态框（Modal） -->
+    <div class="modal fade " id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-dialog" style="width: 1400px;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                    <h4 class="modal-title" id="myModalLabel">图表</h4>
+                </div>
+                <div class="modal-body" style="height: 400px;">
+                    <div class="row">
+                        <div class="col-xs-12">
+                            <div id="charts1" style="margin-left: 0px;width: 100%;height:100%;min-height:300px;min-width:300px;margin-top: 20px;"></div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal -->
+    </div>
+
 
 <script>
 

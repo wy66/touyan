@@ -24,6 +24,9 @@ class JsonCustomEncoder(json.JSONEncoder):
             return obj.strftime('%Y-%m-%d')
         if isinstance(obj, datetime.date):
             return obj.strftime('%Y-%m-%d')
+        if isinstance(obj, np.float64):
+            if np.isnan(obj):
+                return ''
         return super(JsonCustomEncoder, self).default(obj)
 
 def jj_codes(request):
@@ -302,16 +305,17 @@ def dl_query(request):
     return HttpResponse(json.dumps({'errCode':200,'errMsg':'success','table':{}}, cls=JsonCustomEncoder), 'content_type="application/json"')
 
 def fund_general_query(request):
-    day = request.POST.get('day')
+    daynum = request.POST.get('daynum')
+    sdate = request.POST.get('sdate')
     sql = '''
         select t.datadate,t.jjcode,t1.sname,t.net_value from ttjjnet t left join ttjjcode t1 on t.jjcode=t1.jjcode where datadate in (
             select datadate from (
                 SELECT @rownum := @rownum + 1 AS id,t.* from(
-                    SELECT DISTINCT datadate from ttjjnet order by datadate desc
+                    SELECT DISTINCT datadate from ttjjnet where datadate <= date('{sdate}')  order by datadate desc
                 ) t,(select @rownum:=0) t1
-            ) t where t.id in (1,{d})
+            ) t where t.id in (1,{daynum})
         )
-    '''.format(d=day)
+    '''.format(daynum = daynum,sdate = sdate)
     df = pd.read_sql(sql,connections['default'])
     df = df.pivot(index='sname', columns='datadate',values='net_value')
     clist = df.columns.tolist()
@@ -328,19 +332,38 @@ def fund_general_query(request):
 
 def fund_general_rank(request):
     sname = request.POST.get('sname')
-    day = request.POST.get('day')
+    daynum = int(request.POST.get('daynum'))
 
     sql = '''
         SELECT * from ttjjcode where sname = '{sname}'
     '''.format(sname=sname)
     df = pd.read_sql(sql,connections['default'])
-    code = df['JJCODE'][0]
-
+    code = df['jjcode'][0]
     sql = '''
         select * from ttjjnet order by datadate desc
     '''
-    ret_data = {
+    df = pd.read_sql(sql,connections['default'])
 
+    df = df.pivot(index='jjcode', columns='datadate', values='net_value')
+    col_list = df.columns.tolist()
+    col_list.sort(reverse=True)
+    charts = {'xlist':[],'rank':[],'net':[]}
+    for i,c in enumerate(col_list):
+        if(i >= len(col_list)-daynum-1):
+            break
+        tday = c
+        lastday = col_list[i + daynum - 1]
+        df['pct'] = (df[tday] - df[lastday]) / df[lastday] * 100
+        #排名
+        r = df['pct'].rank(ascending=False).loc[df.index==code].values[0]
+        charts['xlist'].insert(0,c)
+        charts['rank'].insert(0,r if not np.isnan(r) else '')
+        net = df.loc[df.index==code][c].values[0]
+        charts['net'].insert(0,net if not np.isnan(net) else '')
+
+    ret_data = {
+        'name':sname,
+        'charts':charts
     }
     return HttpResponse(json.dumps({'errCode':200,'errMsg':'success','data':ret_data}, cls=JsonCustomEncoder), 'content_type="application/json"')
 
