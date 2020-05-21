@@ -317,6 +317,7 @@ def fund_general_query(request):
         )
     '''.format(daynum = daynum,sdate = sdate)
     df = pd.read_sql(sql,connections['default'])
+    df['sname'] = df['sname'] + '(' + df['jjcode'] + ')'
     df = df.pivot(index='sname', columns='datadate',values='net_value')
     clist = df.columns.tolist()
     clist.sort()
@@ -333,7 +334,7 @@ def fund_general_query(request):
 def fund_general_rank(request):
     sname = request.POST.get('sname')
     daynum = int(request.POST.get('daynum'))
-
+    #获取code
     sql = '''
         SELECT * from ttjjcode where sname = '{sname}'
     '''.format(sname=sname)
@@ -347,7 +348,7 @@ def fund_general_rank(request):
     df = df.pivot(index='jjcode', columns='datadate', values='net_value')
     col_list = df.columns.tolist()
     col_list.sort(reverse=True)
-    charts = {'xlist':[],'rank':[],'net':[]}
+    charts = {'xlist':[],'rank':[],'net':[],'ma':[]}
     for i,c in enumerate(col_list):
         if(i >= len(col_list)-daynum-1):
             break
@@ -356,14 +357,30 @@ def fund_general_rank(request):
         df['pct'] = (df[tday] - df[lastday]) / df[lastday] * 100
         #排名
         r = df['pct'].rank(ascending=False).loc[df.index==code].values[0]
+        if pd.isna(r):
+            continue
         charts['xlist'].insert(0,c)
         charts['rank'].insert(0,r if not np.isnan(r) else '')
         net = df.loc[df.index==code][c].values[0]
         charts['net'].insert(0,net if not np.isnan(net) else '')
-
+    #取该code当天的
+    resp = loads_jsonp(requests.get('http://fundgz.1234567.com.cn/js/' + code + '.js').content.decode(encoding='utf-8'))
+    newtime = resp['gztime']
+    newdate = newtime.split(' ')[0]
+    if charts['xlist'][-1] != newdate:
+        charts['xlist'].append(pd.Timestamp(newdate))
+        charts['net'].append(float(resp['gsz']))
+    #均线
+    charts['ma'] = pd.Series(charts['net']).rolling(3).mean().fillna('').to_list()
+    #macd
+    df = pd.DataFrame({'datadate':charts['xlist'],'sum_value':charts['net']})
+    df.set_index('datadate',inplace=True)
+    macd = wg_macd(df)
     ret_data = {
         'name':sname,
-        'charts':charts
+        'charts':charts,
+        'macd':macd,
+        'newtime':newtime
     }
     return HttpResponse(json.dumps({'errCode':200,'errMsg':'success','data':ret_data}, cls=JsonCustomEncoder), 'content_type="application/json"')
 

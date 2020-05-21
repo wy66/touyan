@@ -25,7 +25,7 @@ class TtjjNetSpider(scrapy.Spider):
             yield scrapy.Request(url='http://fundf10.eastmoney.com/{code}.html'.format(code=row[0]), callback=self.parse1, meta={'code':row[0]})
             codes.append(row[0])
         codes.sort()
-        for c in codes[2001:4001]:
+        for c in codes:
             yield scrapy.Request(url='http://fundf10.eastmoney.com/{code}.html'.format(code=c), callback=self.parse1, meta={'code':c})
 
     #获取每个基金对应信息
@@ -46,15 +46,18 @@ class TtjjNetSpider(scrapy.Spider):
             if '亿' not in gm:
                 return
             gm = re.findall(r'\d+',gm)[0]
-            #只取规模大于5亿元
-            if float(gm) < 5:
+            if stype != 'ETF-场内':
                 return
-            #持有一般都有封闭期
-            if '持有' in fname or '封闭' in fname or '定期' in fname:
-                return
-            #乱七八糟不要
-            if stype in ['货币型', '债券型', '定开债券', '固定收益', '理财型', '分级杠杆', '其他创新','QDII','QDII-指数','ETF-场内','QDII-ETF','债券指数']:
-                return
+
+            # #只取规模大于5亿元
+            # if float(gm) < 5:
+            #     return
+            # #持有一般都有封闭期
+            # if '持有' in fname or '封闭' in fname or '定期' in fname:
+            #     return
+            # #乱七八糟不要
+            # if stype in ['货币型', '债券型', '定开债券', '固定收益', '理财型', '分级杠杆', '其他创新','QDII','QDII-指数','ETF-场内','QDII-ETF','债券指数']:
+            #     return
 
             item = TtjjCode()
             item['jjcode'] = code
@@ -80,6 +83,8 @@ class TtjjNetSpider(scrapy.Spider):
         if data['Data'] is None:
             return
         table = data['Data']['LSJZList']
+        if len(table) < 30:
+            return
         for row in table:
             item = TtjjNet()
             item['datadate'] = datetime.datetime.strptime(row['FSRQ'] ,'%Y-%m-%d')

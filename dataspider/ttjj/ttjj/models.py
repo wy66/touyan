@@ -9,7 +9,7 @@ from sqlalchemy import Column, Integer, String,DateTime,DECIMAL,UniqueConstraint
 
 
 class TtjjCodeModel(Base):
-    __tablename__ = 'TtjjCode'
+    __tablename__ = 'ttjjcode'
 
     jjcode =  Column(String(20),primary_key=True)
     fname =  Column(String(200))
@@ -24,7 +24,7 @@ class TtjjCodeModel(Base):
     )
 
 class TtjjNetModel(Base):
-    __tablename__ = 'TtjjNet'
+    __tablename__ = 'ttjjnet'
 
     datadate = Column(DateTime,primary_key=True)
     jjcode =  Column(String(20),primary_key=True)
@@ -36,7 +36,7 @@ class TtjjNetModel(Base):
     )
 
 class TtjjTop10StockModel(Base):
-    __tablename__ = 'TtjjTop10Stock'
+    __tablename__ = 'ttjjtop10stock'
 
     datadate = Column(DateTime,primary_key=True)
     jjcode =  Column(String(20),primary_key=True)

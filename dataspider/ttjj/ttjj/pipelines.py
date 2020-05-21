@@ -13,7 +13,7 @@ class MysqlStorePipeline(object):
 
     def process_item(self, item, spider):
         c = type(item).__name__
-        self.obj = type(c+'Model', (Base,), {'__tablename__': c})
+        self.obj = type(c+'Model', (Base,), {'__tablename__': c.lower()})
         with session_maker() as s:
             #print(item)
             s.merge(self.obj(**item))
